@@ -113,7 +113,7 @@ def make_srt(segments, start, end, path):
             continue
         lines += [str(idx), f"{stamp(a)} --> {stamp(b)}", seg["text"], ""]
         idx += 1
-    Path(path).write_text("\\n".join(lines), encoding="utf-8")
+    Path(path).write_text("\n".join(lines), encoding="utf-8")
 
 def render(video, segments, folder):
     probe = run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -144,10 +144,10 @@ def process(source, folder):
 @dp.message(CommandStart())
 async def start(message: Message):
     await message.answer(
-        "Привет! Я Kadry AI ✂️\\n\\n"
+        "Привет! Я Kadry AI ✂️\n\n"
         "Пришли ссылку на YouTube/Twitch/Kick или загрузи видеофайл. "
         "Я попробую найти 3 интересных момента и собрать вертикальные клипы 9:16 "
-        "с русскими субтитрами.\\n\\n"
+        "с русскими субтитрами.\n\n"
         "Важно: отправляй только видео, на обработку которых у тебя есть права."
     )
 
