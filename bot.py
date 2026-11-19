@@ -9,13 +9,14 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
-MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "20"))
 MAX_SOURCE_MB = int(os.getenv("MAX_SOURCE_MB", "1800"))
 CLIPS_COUNT = 3
 CLIP_SECONDS = 35
@@ -163,15 +164,16 @@ async def uploaded(message: Message, bot: Bot):
     if message.document and not (media.mime_type or "").startswith("video/"):
         await message.answer("Пришли видеофайл (MP4, MOV или WEBM).")
         return
-    if media.file_size and media.file_size > MAX_UPLOAD_MB * 1024 * 1024:
-        await message.answer(f"Файл больше лимита {MAX_UPLOAD_MB} МБ.")
-        return
     status = await message.answer("Получил видео. Скачиваю и анализирую…")
     try:
         with tempfile.TemporaryDirectory(prefix="kadry_") as folder:
             file = await bot.get_file(media.file_id)
             source = str(Path(folder) / "input_video")
-            await bot.download_file(file.file_path, destination=source)
+            # Local Bot API returns an absolute server-side path; standard API returns a relative path.
+            if Path(file.file_path).is_absolute():
+                await asyncio.to_thread(shutil.copy2, file.file_path, source)
+            else:
+                await bot.download_file(file.file_path, destination=source)
             await status.edit_text("Распознаю речь и выбираю моменты…")
             clips = await asyncio.to_thread(process, source, folder)
             for i, clip in enumerate(clips, 1):
@@ -205,7 +207,14 @@ async def text_message(message: Message):
 async def main():
     if not TOKEN:
         raise RuntimeError("Укажи BOT_TOKEN в переменных окружения")
-    bot = Bot(TOKEN)
+    api_base = os.getenv("BOT_API_BASE", "").strip()
+    if api_base:
+        session = AiohttpSession(api=TelegramAPIServer.from_base(api_base))
+        bot = Bot(TOKEN, session=session)
+        log.info("Using custom Telegram Bot API server: %s", api_base)
+    else:
+        bot = Bot(TOKEN)
+        log.info("Using the standard Telegram Bot API (20 MB download limit)")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
