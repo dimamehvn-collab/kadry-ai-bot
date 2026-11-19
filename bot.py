@@ -24,8 +24,14 @@ log = logging.getLogger("kadry-ai")
 dp = Dispatcher()
 
 def run(cmd, timeout=None):
-    return subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, text=True, timeout=timeout)
+    try:
+        return subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, text=True, timeout=timeout)
+    except subprocess.CalledProcessError as exc:
+        details = (exc.stderr or exc.stdout or str(exc)).strip()
+        # Keep Telegram error messages useful without flooding the chat.
+        details = details[-1800:] if details else "Подробности отсутствуют."
+        raise RuntimeError(f"Команда завершилась с ошибкой.\n{details}") from exc
 
 def valid_video_url(value):
     try:
