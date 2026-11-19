@@ -15,7 +15,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
-MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "1800"))
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "20"))
+MAX_SOURCE_MB = int(os.getenv("MAX_SOURCE_MB", "1800"))
 CLIPS_COUNT = 3
 CLIP_SECONDS = 35
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +39,7 @@ def valid_video_url(value):
 
 def download_url(url, folder):
     out = str(Path(folder) / "source.%(ext)s")
-    run(["yt-dlp", "--no-playlist", "--max-filesize", f"{MAX_UPLOAD_MB}M",
+    run(["yt-dlp", "--no-playlist", "--max-filesize", f"{MAX_SOURCE_MB}M",
          "-f", "bv*+ba/b", "--merge-output-format", "mp4", "-o", out, url], timeout=3600)
     candidates = list(Path(folder).glob("source.*"))
     candidates = [p for p in candidates if p.suffix.lower() in (".mp4", ".mkv", ".webm", ".mov")]
